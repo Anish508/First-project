@@ -1,32 +1,18 @@
 import { mutation, query } from "./_generated/server";
-import { ConvexError, v } from "convex/values";
+import { v } from "convex/values";
+
 export const getTodos = query({
   handler: async (ctx) => {
-    const todos = await ctx.db.query("todos").order("desc").collect();
-    return todos;
+    return await ctx.db.query("todos").collect();
   },
 });
 
 export const addTodo = mutation({
   args: { text: v.string() },
   handler: async (ctx, args) => {
-    const todoId = await ctx.db.insert("todos", {
+    await ctx.db.insert("todos", {
       text: args.text,
       iscompleted: false,
-    });
-    return todoId;
-  },
-});
-
-export const toggleTod = mutation({
-  args: { id: v.id("todos") },
-  handler: async (ctx, args) => {
-    const todo = await ctx.db.get(args.id);
-    if (!todo) {
-      throw new ConvexError("Todo not found");
-    }
-    await ctx.db.patch(args.id, {
-      iscompleted: !todo.iscompleted,
     });
   },
 });
@@ -37,24 +23,26 @@ export const deleteTodo = mutation({
     await ctx.db.delete(args.id);
   },
 });
-export const updateTodo = mutation({
-  args: { id: v.id("todos"), text: v.string() },
 
+export const toggleTodo = mutation({
+  args: { id: v.id("todos"), iscompleted: v.boolean() },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, {
-      text: args.text,
-    });
+    await ctx.db.patch(args.id, { iscompleted: args.iscompleted });
   },
 });
 
-export const clearAllTodos = mutation({
-  handler: async (ctx) => {
-    const todos = await ctx.db.query("todos").collect();
+export const editTodo = mutation({
+  args: { id: v.id("todos"), newText: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { text: args.newText });
+  },
+});
 
-    //delete all todos
-    for (const todo of todos) {
+export const clearAll = mutation({
+  handler: async (ctx) => {
+    const all = await ctx.db.query("todos").collect();
+    for (const todo of all) {
       await ctx.db.delete(todo._id);
     }
-    return { deleteCount: todos.length };
   },
 });
